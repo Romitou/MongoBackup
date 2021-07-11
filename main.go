@@ -21,7 +21,7 @@ var backupData string
 
 func main() {
 	// loading configuration file path
-	configPath := flag.String("config", "/etc/mongobackup.conf", "path to configuration file")
+	configPath := flag.String("config", "/etc/mongobackup.yml", "path to configuration file")
 	flag.Parse()
 	log.Println("loading configuration file from " + *configPath)
 
@@ -110,8 +110,12 @@ func sendToDiscord(webhookID string, webhookToken string) {
 		log.Fatal("an error occured while the webhook api creation: ", err)
 	}
 
-	_, err = api.Execute(nil, &discordhook.WebhookExecuteParams{
+	_, err = api.Execute(context.TODO(), &discordhook.WebhookExecuteParams{
 		Content: "backup: " + time.Now().String(),
 	}, strings.NewReader(backupData), "backup.json")
+
+	if err != nil {
+		log.Fatal("an error occured while executing the webhook: ", err)
+	}
 
 }
