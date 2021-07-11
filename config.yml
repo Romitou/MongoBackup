@@ -1,0 +1,5 @@
+logPath: ""
+mongoUri: ""
+webhook:
+  id: ""
+  token: ""
