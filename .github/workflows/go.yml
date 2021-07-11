@@ -19,5 +19,5 @@ jobs:
       
     - uses: actions/upload-artifact@v2
       with:
-        name: MongoBackuo
-        path: ./MongoBackuo
+        name: MongoBackup
+        path: ./MongoBackup
