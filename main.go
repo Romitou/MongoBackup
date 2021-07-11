@@ -21,7 +21,7 @@ var backupData string
 
 func main() {
 	// loading configuration file path
-	configPath := flag.String("config", "D:\\Go\\MongoBackup\\config.yml", "path to configuration file")
+	configPath := flag.String("config", "/etc/mongobackup.conf", "path to configuration file")
 	flag.Parse()
 	log.Println("loading configuration file from " + *configPath)
 
