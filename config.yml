@@ -1,5 +1,6 @@
 logPath: ""
 mongoUri: ""
+zipPassword: ""
 webhook:
   id: ""
   token: ""

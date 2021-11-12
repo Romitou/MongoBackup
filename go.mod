@@ -3,6 +3,7 @@ module github.com/Romitou/MongoBackup
 go 1.16
 
 require (
+	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0 // indirect
 	github.com/andersfylling/snowflake v1.3.0 // indirect
 	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/coreos/bbolt v1.3.2 // indirect

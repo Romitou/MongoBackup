@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"github.com/alexmullins/zip"
 	"github.com/andersfylling/snowflake"
 	"github.com/nickname32/discordhook"
 	"github.com/spf13/viper"
@@ -18,6 +19,7 @@ import (
 )
 
 var backupData string
+var backupName = time.Now().Format("2006-01-02T150405")
 
 func main() {
 	// loading configuration file path
@@ -77,6 +79,9 @@ func main() {
 	}
 	webhookID := viper.GetString("webhook.id")
 	webhookToken := viper.GetString("webhook.token")
+	zipPassword := viper.GetString("zipPassword")
+
+	createZipFile(zipPassword)
 	sendToDiscord(webhookID, webhookToken)
 }
 
@@ -100,19 +105,44 @@ func backupCollection(cursor *mongo.Cursor, ctx context.Context) {
 		backupData += string(marshal) + "\n"
 	}
 	if err := cursor.Err(); err != nil {
-		log.Fatal("an error occured with the mongo cursor: ", err)
+		log.Fatal("an error occurred with the mongo cursor: ", err)
 	}
+}
+
+func createZipFile(zipPassword string) {
+	archive, err := os.Create("backups/" + backupName + ".zip")
+	if err != nil {
+		log.Fatal("an error occurred while creating the archive: ", err)
+	}
+	defer archive.Close()
+
+	zipWriter := zip.NewWriter(archive)
+	writer, err := zipWriter.Encrypt(backupName+".json", zipPassword)
+	if err != nil {
+		log.Fatal("an error occurred while creating the archive: ", err)
+	}
+
+	_, err = io.Copy(writer, strings.NewReader(backupData))
+	if err != nil {
+		log.Fatal("an error occurred while creating the archive: ", err)
+	}
+	defer zipWriter.Close()
 }
 
 func sendToDiscord(webhookID string, webhookToken string) {
 	api, err := discordhook.NewWebhookAPI(snowflake.ParseSnowflakeString(webhookID), webhookToken, true, nil)
 	if err != nil {
-		log.Fatal("an error occured while the webhook api creation: ", err)
+		log.Fatal("an error occurred while the webhook api creation: ", err)
+	}
+
+	file, err := os.Open("backups/" + backupName + ".zip")
+	if err != nil {
+		return
 	}
 
 	_, err = api.Execute(context.TODO(), &discordhook.WebhookExecuteParams{
-		Content: "backup: " + time.Now().String(),
-	}, strings.NewReader(backupData), "backup.json")
+		Content: "backup: " + time.Now().Format(time.RFC3339),
+	}, file, time.Now().Format(time.RFC3339)+".zip")
 
 	if err != nil {
 		log.Fatal("an error occured while executing the webhook: ", err)
