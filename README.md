@@ -8,6 +8,9 @@ Totally written in Go, you benefit from all the advantages of these languages, o
 
 ### It's simple 🤓
 All you have to do is download the application binaries, fill in a configuration file and create a cron job. Simple, isn't it?
+```
+curl https://github.com/Romitou/MongoBackup/releases/download/latest/mongobackup-linux -o mongobackup 
+```
 ```yml
 # Where the logs are located
 logPath: "./logs.log"
