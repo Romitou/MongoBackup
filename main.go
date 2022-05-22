@@ -2,23 +2,19 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/alexmullins/zip"
 	"github.com/andersfylling/snowflake"
 	"github.com/nickname32/discordhook"
 	"github.com/spf13/viper"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"log"
 	"os"
-	"strings"
+	"os/exec"
 	"time"
 )
 
-var backupData string
 var backupName = time.Now().Format("2006-01-02T150405")
 
 func main() {
@@ -44,39 +40,8 @@ func main() {
 	log.SetFlags(log.Ltime)
 	log.SetOutput(io.MultiWriter(file, os.Stdout))
 
-	// prepare mongo context
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	runMongoDump()
 
-	// create a mongo client
-	mongoUri := viper.GetString("mongoUri")
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUri))
-	if err != nil {
-		log.Fatal("an error occurred while creating the mongo client: ", err)
-	}
-
-	databaseNames, err := client.ListDatabaseNames(ctx, bson.D{}, options.ListDatabases())
-	if err != nil {
-		log.Fatal("an error occurred while reading databases names: ", err)
-	}
-
-	for _, databaseName := range databaseNames {
-		database := client.Database(databaseName)
-		collectionNames, err := database.ListCollectionNames(ctx, bson.D{}, options.ListCollections())
-		if err != nil {
-			log.Fatal("an error occurred while reading collection names of "+databaseName+" database: ", err)
-		}
-		backupData += "// database " + databaseName + "\n"
-		for _, collectionName := range collectionNames {
-			collection := database.Collection(collectionName)
-			cursor, err := collection.Find(ctx, bson.D{}, options.Find())
-			if err != nil {
-				log.Fatal("an error occurred while reading documents of "+collectionName+" collection: ", err)
-			}
-			backupData += "// collection " + collectionName + "\n"
-			backupCollection(cursor, ctx)
-		}
-	}
 	webhookID := viper.GetString("webhook.id")
 	webhookToken := viper.GetString("webhook.token")
 	zipPassword := viper.GetString("zipPassword")
@@ -85,27 +50,10 @@ func main() {
 	sendToDiscord(webhookID, webhookToken)
 }
 
-func backupCollection(cursor *mongo.Cursor, ctx context.Context) {
-	defer func(cursor *mongo.Cursor, ctx context.Context) {
-		err := cursor.Close(ctx)
-		if err != nil {
-			log.Fatal("an error occurred while closing mongo cursor: ", err)
-		}
-	}(cursor, ctx)
-	for cursor.Next(ctx) {
-		var document bson.M
-		err := cursor.Decode(&document)
-		if err != nil {
-			log.Fatal("an error occurred while decoding a mongo document: ", err)
-		}
-		marshal, err := json.Marshal(document)
-		if err != nil {
-			return
-		}
-		backupData += string(marshal) + "\n"
-	}
-	if err := cursor.Err(); err != nil {
-		log.Fatal("an error occurred with the mongo cursor: ", err)
+func runMongoDump() {
+	subProcess := exec.Command("mongodump", "--uri=\""+viper.GetString("mongoUri")+"\"", "--archive=dump."+backupName+".archive")
+	if err := subProcess.Run(); err != nil {
+		fmt.Println("An error occured: ", err)
 	}
 }
 
@@ -114,19 +62,34 @@ func createZipFile(zipPassword string) {
 	if err != nil {
 		log.Fatal("an error occurred while creating the archive: ", err)
 	}
-	defer archive.Close()
+	defer func(archive *os.File) {
+		err = archive.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(archive)
 
 	zipWriter := zip.NewWriter(archive)
-	writer, err := zipWriter.Encrypt(backupName+".json", zipPassword)
+	writer, err := zipWriter.Encrypt("backups/dump."+backupName+".archive", zipPassword)
 	if err != nil {
 		log.Fatal("an error occurred while creating the archive: ", err)
 	}
 
-	_, err = io.Copy(writer, strings.NewReader(backupData))
+	file, err := os.Open("backups/dump." + backupName + ".archive")
+	if err != nil {
+		return
+	}
+
+	_, err = io.Copy(writer, file)
 	if err != nil {
 		log.Fatal("an error occurred while creating the archive: ", err)
 	}
-	defer zipWriter.Close()
+	defer func(zipWriter *zip.Writer) {
+		err = zipWriter.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(zipWriter)
 }
 
 func sendToDiscord(webhookID string, webhookToken string) {

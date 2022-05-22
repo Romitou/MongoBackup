@@ -1,12 +1,13 @@
 # MongoBackup 🍃
 Fast and efficient tool to backup Mongo databases using a Discord webhook.
+<br>Important: you need `mongodb-database-tools` installed.
 
-## It's fast ⚡
-Totally written in Go, you benefit from all the advantages of this languages, which is optimized for performance. This application also uses the super-fast official Mongo driver.
+### It's fast ⚡
+Totally written in Go, you benefit from all the advantages of these languages, optimized for performance. This program also uses the official Mongo drivers.
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Go_Logo_Aqua.svg/1200px-Go_Logo_Aqua.svg.png" height=40 width=auto>
 
-## It's simple 🤓
+### It's simple 🤓
 All you have to do is download the application binaries, fill in a configuration file and create a cron job. Simple, isn't it?
 ```
 curl -L https://github.com/Romitou/MongoBackup/releases/latest/download/mongobackup-linux -o mongobackup
