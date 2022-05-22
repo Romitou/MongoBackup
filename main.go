@@ -51,7 +51,7 @@ func main() {
 }
 
 func runMongoDump() {
-	subProcess := exec.Command("mongodump", "--uri=\""+viper.GetString("mongoUri")+"\"", "--archive=dump."+backupName+".archive")
+	subProcess := exec.Command("mongodump", "--uri=\""+viper.GetString("mongoUri")+"\"", "--archive=backups/dump."+backupName+".archive")
 	if err := subProcess.Run(); err != nil {
 		fmt.Println("An error occured: ", err)
 	}
